@@ -582,8 +582,16 @@
                      ]).
 -define(SKEL_TYPES, []).
 
--spec account_id(kz_json:object()) -> api_binary().
-account_id(JObj) ->
+-spec account_id(api_terms()) -> api_ne_binary().
+account_id(Req) when is_list(Req) ->
+    find_account_id(Req, fun props:get_first_defined/2);
+account_id('undefined') ->
+    'undefined';
+account_id(Req) ->
+    find_account_id(Req, fun kz_json:get_first_defined/2).
+
+-spec find_account_id(function(), kz_json:object()) -> api_ne_binary().
+find_account_id(GetFun, Req) ->
     Paths = [<<"account_id">>
             ,[<<"account">>, <<"_id">>]
             ,<<"pvt_account_id">>
@@ -594,14 +602,25 @@ account_id(JObj) ->
             ,[<<"details">>, <<"custom_channel_vars">>, <<"account_id">>]
             ,[<<"Details">>, <<"Custom-Channel-Vars">>, <<"Account-ID">>]
             ],
-    kz_json:get_first_defined(Paths, JObj).
+    case GetFun(Paths, Req) of
+        ?NE_BINARY=Id -> Id;
+        _ -> 'undefined'
+    end.
 
--spec account_db(kz_json:object()) -> api_ne_binary().
-account_db(JObj) ->
+-spec account_db(api_terms()) -> api_ne_binary().
+account_db(Req) when is_list(Req) ->
+    find_account_db(Req, fun props:get_first_defined/2);
+account_db('undefined') ->
+    'undefined';
+account_db(Req) ->
+    find_account_db(Req, fun kz_json:get_first_defined/2).
+
+-spec find_account_db(function(), api_terms()) -> api_ne_binary().
+find_account_db(GetFun, Req) ->
     Paths = [<<"account_db">>, <<"pvt_account_db">>, <<"Account-DB">>],
-    case kz_json:get_first_defined(Paths, JObj) of
+    case GetFun(Paths, Req) of
         'undefined' ->
-            case account_id(JObj) of
+            case find_account_id(GetFun, Req) of
                 'undefined' -> 'undefined';
                 AccountId -> kz_util:format_account_db(AccountId)
             end;

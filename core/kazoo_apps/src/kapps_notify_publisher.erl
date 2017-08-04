@@ -88,7 +88,7 @@ check_for_failure(NotifyType, Req, {_ErrorType, Responses}=Resp) ->
 maybe_handle_error('undefined', _Req, _Error) ->
     lager:warning("not saving undefined notification");
 maybe_handle_error(NotifyType, Req, Error) ->
-    AccountId = find_account_id(Req),
+    AccountId = kapi_notifications:account_id(Req),
     should_presist_notify(AccountId)
         andalso should_handle_notify_type(NotifyType, AccountId)
         andalso handle_error(NotifyType, Req, Error).
@@ -105,13 +105,11 @@ handle_error(NotifyType, Req, Error) ->
               ,{<<"payload">>, Req}
               ,{<<"attempts">>, 1}
               ]),
-    JObj = kz_doc:update_pvt_parameters(kz_json:from_list_recursive(Props)
-                                       ,'undefined'
-                                       , [{'type', <<"failed_notify">>}
-                                         ,{'account_id', find_account_id(Req)}
-                                         ,{'account_db', ?KZ_PENDING_NOTIFY_DB}
-                                         ]
-                                       ),
+    PvtParams = [{'type', <<"failed_notify">>}
+                ,{'account_id', kapi_notifications:account_id(Req)}
+                ,{'account_db', ?KZ_PENDING_NOTIFY_DB}
+                ],
+    JObj = kz_doc:update_pvt_parameters(kz_json:from_list_recursive(Props), 'undefined', PvtParams),
     save_pending_notification(NotifyType, JObj, 2).
 
 -spec save_pending_notification(ne_binary(), kz_json:object(), integer()) -> 'ok'.
@@ -182,28 +180,6 @@ maybe_ignore_failure(<<"badmatch">>) -> 'false'; %% not ignoring it yet (voicema
 maybe_ignore_failure(_) -> 'false'.
 
 %% @private
-%% @doc try to find account id in different part of payload(copied from teletype_util)
--spec find_account_id(api_terms()) -> api_ne_binary().
-find_account_id(Req) when is_list(Req) ->
-    find_account_id(Req, fun props:get_first_defined/2);
-find_account_id(Req) ->
-    find_account_id(Req, fun kz_json:get_first_defined/2).
-
-find_account_id(Req, Get) ->
-    Get([<<"account_id">>
-        ,[<<"account">>, <<"_id">>]
-        ,<<"pvt_account_id">>
-        ,<<"_id">>, <<"id">>
-        ,<<"Account-ID">>
-        ,[<<"details">>, <<"account_id">>]
-        ,[<<"Details">>, <<"Account-ID">>]
-        ,[<<"details">>, <<"custom_channel_vars">>, <<"account_id">>]
-        ,[<<"Details">>, <<"Custom-Channel-Vars">>, <<"Account-ID">>]
-        ]
-       ,Req
-       ).
-
-%% @private
 %% @doc convert error to human understandable string
 -spec error_to_failure_reason(any()) -> ne_binary().
 error_to_failure_reason({'badmatch', {'error', BadMatch}}) ->
@@ -222,6 +198,8 @@ error_to_failure_reason(Error) ->
 %% @private
 %% @doc same as above for json (response from teletype)
 -spec json_to_failure_reason(any()) -> ne_binary().
+json_to_failure_reason({'returned', JObjs}) when is_list(JObjs) ->
+    kz_json:find(<<"message">>, JObjs, <<"unknown broker error">>);
 json_to_failure_reason({ErrorType, JObjs}) when is_list(JObjs) ->
     case kz_json:find(<<"Status">>, JObjs) of
         <<"failed">> -> <<"teletype failed with reason "
@@ -231,8 +209,8 @@ json_to_failure_reason({ErrorType, JObjs}) when is_list(JObjs) ->
         <<"completed">> -> <<"it shouldn't be here">>;
         _ -> <<"recieved ", (cast_to_binary(ErrorType))/binary, " without any response from teletype">>
     end;
-json_to_failure_reason({'error', JObj}) ->
-    json_to_failure_reason({'error', [JObj]});
+json_to_failure_reason({ErrorType, JObj}) ->
+    json_to_failure_reason({ErrorType, [JObj]});
 json_to_failure_reason(JObjs) when is_list(JObjs) ->
     json_to_failure_reason({'error', JObjs});
 json_to_failure_reason(JObj) ->
