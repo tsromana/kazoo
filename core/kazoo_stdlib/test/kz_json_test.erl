@@ -303,6 +303,11 @@ do_merge_recursive(J) ->
     ,?_assert(kz_json:is_empty(kz_json:get_value(<<"blip">>, J)))
     ].
 
+get_value_test_() ->
+    %% THOU SHALL NOT PASS
+    [?_assertEqual(undefined, kz_json:get_value(<<"a">>, not_json))
+    ].
+
 get_binary_value_test_() ->
     [?_assert(is_binary(kz_json:get_binary_value(<<"d1k1">>, ?D1)))
     ,?_assertEqual('undefined', kz_json:get_binary_value(<<"d2k1">>, ?D1))
