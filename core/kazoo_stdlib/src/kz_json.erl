@@ -876,6 +876,8 @@ get_value1([K|Ks], JObjs, Default) when is_list(JObjs) ->
     end;
 get_value1([K|Ks], ?JSON_WRAPPER(Props), Default) ->
     get_value1(Ks, props:get_value(K, Props, Default), Default);
+get_value1(_, undefined, Default) ->
+    Default;
 get_value1(_, ?JSON_WRAPPER(_), Default) ->
     Default.
 
