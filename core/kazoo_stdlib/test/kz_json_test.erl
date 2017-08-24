@@ -471,7 +471,7 @@ get_value_test_() ->
     ,?_assertEqual(<<"not">>, kz_json:get_value([3, <<"sub_docs">>, <<"2">>, <<"d2k2">>], ?D3, <<"not">>))
     ,?_assertEqual(3.14,      kz_json:get_value([3, <<"sub_docs">>, 2, <<"d2k2">>], ?D4, <<"not">>))
      %% Reading from non JObj should not be okay
-    ,?_assertEqual(undefined, kz_json:get_value(<<"a">>, not_json))
+    ,?_assertError(badarg, kz_json:get_value(<<"a">>, not_json))
     ].
 
 -define(T2R1, ?JSON_WRAPPER([{<<"d1k1">>, <<"d1v1">>}, {<<"d1k2">>, <<"update">>}, {<<"d1k3">>, [<<"d1v3.1">>, <<"d1v3.2">>, <<"d1v3.3">>]}])).
