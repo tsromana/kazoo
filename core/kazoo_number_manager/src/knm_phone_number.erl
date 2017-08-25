@@ -285,7 +285,9 @@ retry_conflicts(T0, Db, PNsMap, ErrorF) ->
     lists:foldl(F, BaseT, Conflicts).
 
 take_conflits(T=#{ko := KOs}) ->
-    F = fun ({_Num, R}) -> knm_errors:cause(R) =:= <<"conflict">> end,
+    F = fun ({_Num, R}) when is_atom(R) -> false;
+            ({_Num, R}) -> knm_errors:cause(R) =:= <<"conflict">>
+        end,
     {Conflicts, NewKOs} = lists:partition(F, maps:to_list(KOs)),
     {Nums, _} = lists:unzip(Conflicts),
     {Nums, T#{ko => maps:from_list(NewKOs)}}.
