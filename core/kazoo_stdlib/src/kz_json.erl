@@ -879,7 +879,9 @@ get_value1([K|Ks], ?JSON_WRAPPER(Props), Default) ->
 get_value1(_, undefined, Default) ->
     Default;
 get_value1(_, ?JSON_WRAPPER(_), Default) ->
-    Default.
+    Default;
+get_value1(_, _, _) ->
+    erlang:error(badarg).
 
 -spec values(object()) -> json_terms().
 -spec values(path(), object()) -> json_terms().
